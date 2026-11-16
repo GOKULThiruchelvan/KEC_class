@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hive on Windows: Complete Guide from Setup to Group Queries</title>
+<style>
+:root{
+  --bg:#f6f8f7; --panel:#ffffff; --ink:#18302d; --muted:#5a706c; --line:#d5dfdc;
+  --honey:#d99a00; --honey-soft:#fbefc9; --bad:#b3261e; --bad-soft:#fbe4e1; --ok:#1f7a4d; --ok-soft:#dff3e7;
+  --code-bg:#14201f; --code-ink:#e8efe9;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0f1716; --panel:#162221; --ink:#e4ece9; --muted:#9bb0ab; --line:#2a3a38;
+  --honey:#f0b429; --honey-soft:#3a2f0d; --bad:#ff8a80; --bad-soft:#3a1916; --ok:#6fd49c; --ok-soft:#14301f;
+  --code-bg:#0a1211;}
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,"Segoe UI","Noto Sans Tamil","Nirmala UI",sans-serif}
+.wrap{display:grid;grid-template-columns:230px minmax(0,1fr);max-width:1100px;margin:0 auto;gap:40px;padding:0 20px}
+nav{position:sticky;top:0;align-self:start;padding:28px 0;height:100vh;overflow:auto}
+nav h2{font-size:15px;margin:0 0 14px}
+nav a{display:flex;gap:10px;align-items:center;padding:6px 0;color:var(--muted);text-decoration:none;font-size:14px}
+nav a:hover,nav a:focus-visible{color:var(--ink)}
+.hex{font-style:normal;flex:none;display:grid;place-items:center;font-weight:700;color:#18302d;background:var(--honey);clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+nav a .hex{width:26px;height:28px;font-size:12px}
+main{padding:36px 0 80px;min-width:0}
+header h1{font-size:clamp(28px,4vw,40px);line-height:1.15;margin:0 0 10px}
+header p{margin:0;color:var(--muted);max-width:62ch}
+.rules{margin:22px 0 0;padding:14px 18px;background:var(--honey-soft);border-left:4px solid var(--honey);border-radius:4px;font-size:15px}
+section{margin-top:52px;scroll-margin-top:16px}
+h2.t{display:flex;align-items:center;gap:14px;font-size:24px;margin:0 0 6px}
+h2.t .hex{width:40px;height:44px;font-size:17px}
+.lead{color:var(--muted);margin:0 0 18px;max-width:66ch}
+h3{font-size:17px;margin:26px 0 8px}
+.code{position:relative;margin:10px 0 12px;background:var(--code-bg);border-radius:8px}
+.code pre{margin:0;padding:16px 18px;overflow-x:auto;color:var(--code-ink);font:13.5px/1.65 ui-monospace,"Cascadia Mono",Consolas,monospace}
+.code button{position:absolute;top:8px;right:8px;background:#26403d;color:#e8efe9;border:1px solid #3a5a56;border-radius:5px;padding:3px 10px;font-size:12px;cursor:pointer}
+.code button:hover,.code button:focus-visible{background:var(--honey);color:#18302d;border-color:var(--honey)}
+.note{margin:10px 0;padding:11px 15px;border-radius:6px;font-size:15px;border-left:4px solid}
+.note.bad{background:var(--bad-soft);border-color:var(--bad)}
+.note.ok{background:var(--ok-soft);border-color:var(--ok)}
+.note.info{background:var(--panel);border-color:var(--honey);box-shadow:0 0 0 1px var(--line) inset}
+.note b{display:block;margin-bottom:2px}
+code{font:13px ui-monospace,Consolas,monospace;background:rgba(127,127,127,.15);padding:1px 5px;border-radius:3px}
+.tw{overflow-x:auto;margin:10px 0 14px}
+table{border-collapse:collapse;width:100%;font-size:14.5px;background:var(--panel)}
+th,td{border:1px solid var(--line);padding:7px 11px;text-align:left;vertical-align:top}
+th{background:var(--honey-soft)}
+@media (max-width:820px){.wrap{grid-template-columns:1fr}nav{display:none}}
+@media print{nav{display:none}.wrap{display:block}.code button{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav aria-label="Guide sections">
+  <h2>Hive Guide</h2>
+  <a href="#s1"><i class="hex">1</i>One-time setup</a>
+  <a href="#s2"><i class="hex">2</i>Start every time</a>
+  <a href="#s3"><i class="hex">3</i>Table + insert</a>
+  <a href="#s4"><i class="hex">4</i>Update fails</a>
+  <a href="#s5"><i class="hex">5</i>ACID table</a>
+  <a href="#s6"><i class="hex">6</i>Constraints</a>
+  <a href="#s7"><i class="hex">7</i>Group queries</a>
+  <a href="#s8"><i class="hex">8</i>Error finder</a>
+</nav>
+<main>
+<header>
+  <h1>Hive on Windows: Complete Guide</h1>
+  <p>From first setup to ACID tables, constraints and group queries. Tested stack: Java 8, Hadoop 2.7.x, Hive 2.1.0, Derby 10.14.2.0.</p>
+  <div class="rules"><b>Two rules:</b> use an <b>Administrator Command Prompt</b>, never PowerShell. Click Copy on a block and paste the whole block.</div>
+</header>
+
+<section id="s1">
+  <h2 class="t"><i class="hex">1</i>One-time setup</h2>
+  <p class="lead">Do this once per computer. If Hive already starts and ACID works, skip it. ஒரு தடவை மட்டும் செய்ய வேண்டியவை.</p>
+  <h3>1a. Environment variables</h3>
+  <div class="code"><button>Copy</button><pre>setx HADOOP_HOME "C:\hadoop" /M
+setx HIVE_HOME "C:\hive" /M
+setx DERBY_HOME "C:\derby" /M</pre></div>
+  <div class="note info"><b>No \bin at the end</b>HADOOP_HOME must be exactly C:\hadoop. setx changes only new windows, so close the window and open a new one. To fix the current window at once, run <code>set HADOOP_HOME=C:\hadoop</code>.</div>
+  <h3>1b. Copy the Derby client jars into Hive</h3>
+  <div class="code"><button>Copy</button><pre>copy C:\derby\lib\derbyclient.jar C:\hive\lib\
+copy C:\derby\lib\derbytools.jar C:\hive\lib\</pre></div>
+  <h3>1c. Format HDFS (new installs only)</h3>
+  <div class="code"><button>Copy</button><pre>hdfs namenode -format</pre></div>
+  <div class="note bad"><b>Careful</b>This erases all HDFS data. Never run it on a machine that already has data.</div>
+  <h3>1d. Create the HDFS folders for Hive</h3>
+  <p class="lead">Start HDFS first (see step 2), then:</p>
+  <div class="code"><button>Copy</button><pre>hdfs dfs -mkdir -p /user/hive/warehouse /tmp
+hdfs dfs -chmod -R 777 /user/hive/warehouse /tmp</pre></div>
+  <h3>1e. Create the metastore (Derby must be running)</h3>
+  <div class="code"><button>Copy</button><pre>schematool -dbType derby -initSchema</pre></div>
+  <div class="note ok"><b>Expected</b>The last line says <code>schemaTool completed</code>.</div>
+  <h3>1f. Add the ACID transaction tables to the metastore</h3>
+  <p class="lead">ACID tables need extra tables (NEXT_LOCK_ID, TXNS, HIVE_LOCKS). If they are missing, an ACID insert fails with <code>Table/View 'NEXT_LOCK_ID' does not exist</code>. Quit Hive first, keep the Derby window open, then:</p>
+  <div class="code"><button>Copy</button><pre>set DERBY_HOME=C:\derby
+C:\derby\bin\ij</pre></div>
+  <p>At the <code>ij&gt;</code> prompt, enter these lines one by one:</p>
+  <div class="code"><button>Copy</button><pre>connect 'jdbc:derby://localhost:1527/metastore_db';
+run 'C:/hive/scripts/metastore/upgrade/derby/hive-txn-schema-2.1.0.derby.sql';
+exit;</pre></div>
+  <div class="note ok"><b>Expected</b>A series of <code>0 rows inserted/updated/deleted</code> and <code>1 row inserted</code> lines, then back at the normal prompt. Do it only once.</div>
+</section>
+
+<section id="s2">
+  <h2 class="t"><i class="hex">2</i>Start every time</h2>
+  <p class="lead">Order matters: Derby first, then Hadoop, then Hive.</p>
+  <h3>Window 1: Derby (keep it open)</h3>
+  <div class="code"><button>Copy</button><pre>set DERBY_HOME=C:\derby
+cd C:\derby\bin
+StartNetworkServer -h 0.0.0.0</pre></div>
+  <div class="note ok"><b>Expected</b>Message: started and ready to accept connections on port 1527.</div>
+  <h3>Window 2: Hadoop and Hive</h3>
+  <div class="code"><button>Copy</button><pre>start-dfs.cmd
+start-yarn.cmd
+jps
+set HADOOP_HOME=C:\hadoop
+hive</pre></div>
+  <div class="note ok"><b>Expected</b>jps lists NameNode, DataNode, ResourceManager, NodeManager. Then the <code>hive&gt;</code> prompt appears. The SLF4J and log4j2 lines are only warnings.</div>
+</section>
+
+<section id="s3">
+  <h2 class="t"><i class="hex">3</i>Create a table and insert</h2>
+  <p class="lead">This first table is a normal table. It does not follow ACID. Use a fresh Hive session, without any ACID settings.</p>
+  <div class="code"><button>Copy</button><pre>create database demo_db;
+use demo_db;
+
+create table emp_normal (id int, name string, dept string, salary int);
+
+insert into emp_normal values
+  (1,'Gokul','IT',30000),
+  (2,'Arun','HR',40000),
+  (3,'Priya','IT',50000),
+  (4,'Kavin','Sales',35000),
+  (5,'Divya','HR',45000);
+
+select * from emp_normal;</pre></div>
+  <div class="note ok"><b>Expected</b>Five rows. The insert runs a MapReduce job and takes a few seconds.</div>
+  <div class="code"><button>Copy</button><pre>describe formatted emp_normal;</pre></div>
+  <div class="note info"><b>Look at</b>Table Parameters. There is no <code>transactional</code> entry.</div>
+</section>
+
+<section id="s4">
+  <h2 class="t"><i class="hex">4</i>Update and delete fail on it</h2>
+  <p class="lead">Insert works, but update and delete need an ACID table. இங்க error வருவதுதான் demo.</p>
+  <div class="code"><button>Copy</button><pre>update emp_normal set salary = 55000 where id = 1;
+delete from emp_normal where id = 2;</pre></div>
+  <div class="note bad"><b>Expected error (this is the point)</b>FAILED: SemanticException [Error 10294]: Attempt to do update or delete using transaction manager that does not support these operations.</div>
+  <p>The data is unchanged, so the group queries in step 7 still use the original five rows.</p>
+</section>
+
+<section id="s5">
+  <h2 class="t"><i class="hex">5</i>Create an ACID table</h2>
+  <p class="lead">Same columns, but built for ACID. Update and delete now work.</p>
+  <h3>5a. ACID settings</h3>
+  <div class="code"><button>Copy</button><pre>set hive.support.concurrency=true;
+set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.txn.manager=org.apache.hadoop.hive.ql.lockmgr.DbTxnManager;
+set hive.compactor.initiator.on=true;
+set hive.compactor.worker.threads=1;</pre></div>
+  <div class="note info"><b>Every new session</b>These last only for the current Hive session. Run them again after each restart of Hive, before touching an ACID table. Do not add <code>hive.enforce.bucketing</code>: Hive 2.x removed it and reports that it does not exist.</div>
+  <h3>5b. Create the table and insert</h3>
+  <div class="code"><button>Copy</button><pre>create table emp_acid (id int, name string, dept string, salary int)
+clustered by (id) into 2 buckets
+stored as orc
+tblproperties ('transactional'='true');
+
+insert into emp_acid values
+  (1,'Gokul','IT',30000),
+  (2,'Arun','HR',40000),
+  (3,'Priya','IT',50000),
+  (4,'Kavin','Sales',35000),
+  (5,'Divya','HR',45000);
+
+select * from emp_acid;</pre></div>
+  <h3>5c. Update and delete</h3>
+  <div class="code"><button>Copy</button><pre>update emp_acid set salary = 55000 where id = 1;
+select * from emp_acid;
+
+delete from emp_acid where id = 2;
+select * from emp_acid;</pre></div>
+  <div class="note ok"><b>Expected</b>Gokul salary becomes 55000, then Arun row disappears. No error.</div>
+  <h3>Why this table works</h3>
+  <div class="tw"><table>
+    <tr><th>Requirement</th><th>Reason</th></tr>
+    <tr><td><code>stored as orc</code></td><td>Only the ORC format supports ACID.</td></tr>
+    <tr><td><code>clustered by (id) into 2 buckets</code></td><td>Hive 2.x requires bucketing for ACID tables.</td></tr>
+    <tr><td><code>'transactional'='true'</code></td><td>This property makes the table ACID.</td></tr>
+    <tr><td>ACID settings in 5a</td><td>They switch Hive to the transaction manager that can lock and update rows.</td></tr>
+  </table></div>
+  <div class="tw"><table>
+    <tr><th></th><th>emp_normal</th><th>emp_acid</th></tr>
+    <tr><td>Format</td><td>Text</td><td>ORC</td></tr>
+    <tr><td>Bucketing</td><td>No</td><td>Yes</td></tr>
+    <tr><td>transactional</td><td>No</td><td>true</td></tr>
+    <tr><td>Insert</td><td>Works</td><td>Works</td></tr>
+    <tr><td>Update / Delete</td><td>Error 10294</td><td>Works</td></tr>
+  </table></div>
+</section>
+
+<section id="s6">
+  <h2 class="t"><i class="hex">6</i>Constraints: primary key and foreign key</h2>
+  <p class="lead">Hive 2.1.0 accepts these only as <b>informational</b> constraints, written with <code>disable novalidate</code>. Hive does not enforce them.</p>
+  <h3>6a. Primary key</h3>
+  <div class="code"><button>Copy</button><pre>create table dept (
+  dept_id int,
+  dept_name string,
+  primary key (dept_id) disable novalidate
+);
+
+insert into dept values (1,'IT'),(2,'HR'),(1,'Sales');
+
+select * from dept;</pre></div>
+  <div class="note info"><b>Expected</b>dept_id 1 appears twice and there is no error. MySQL would reject the duplicate; Hive does not check it.</div>
+  <p>Find the duplicate yourself:</p>
+  <div class="code"><button>Copy</button><pre>select dept_id, count(*) as cnt
+from dept
+group by dept_id
+having count(*) &gt; 1;</pre></div>
+  <h3>6b. Foreign key</h3>
+  <div class="code"><button>Copy</button><pre>create table emp_fk (
+  id int,
+  name string,
+  dept_id int,
+  primary key (id) disable novalidate,
+  constraint fk_dept foreign key (dept_id)
+    references dept(dept_id) disable novalidate
+);
+
+insert into emp_fk values (1,'Gokul',1),(2,'Arun',99);
+
+select * from emp_fk;
+describe formatted emp_fk;</pre></div>
+  <div class="note info"><b>Expected</b>dept_id 99 does not exist in dept, yet the insert succeeds. The describe output lists both constraints.</div>
+  <div class="tw"><table>
+    <tr><th>Constraint</th><th>MySQL / Oracle</th><th>Hive 2.1.0</th></tr>
+    <tr><td>PRIMARY KEY</td><td>Enforced</td><td>Informational only</td></tr>
+    <tr><td>FOREIGN KEY</td><td>Enforced</td><td>Informational only</td></tr>
+    <tr><td>NOT NULL, UNIQUE, CHECK</td><td>Enforced</td><td>Not available in 2.1.0</td></tr>
+  </table></div>
+</section>
+
+<section id="s7">
+  <h2 class="t"><i class="hex">7</i>Group queries</h2>
+  <p class="lead">Run these on <code>emp_normal</code>, which still has the original five rows.</p>
+  <h3>Query 1: employees per department</h3>
+  <div class="code"><button>Copy</button><pre>select dept, count(*) as emp_count
+from emp_normal
+group by dept;</pre></div>
+  <div class="tw"><table><tr><th>dept</th><th>emp_count</th></tr><tr><td>IT</td><td>2</td></tr><tr><td>HR</td><td>2</td></tr><tr><td>Sales</td><td>1</td></tr></table></div>
+  <h3>Query 2: average and highest salary per department</h3>
+  <div class="code"><button>Copy</button><pre>select dept, avg(salary) as avg_sal, max(salary) as max_sal
+from emp_normal
+group by dept;</pre></div>
+  <div class="tw"><table><tr><th>dept</th><th>avg_sal</th><th>max_sal</th></tr><tr><td>IT</td><td>40000</td><td>50000</td></tr><tr><td>HR</td><td>42500</td><td>45000</td></tr><tr><td>Sales</td><td>35000</td><td>35000</td></tr></table></div>
+  <h3>Query 3: departments with a total salary above 70000</h3>
+  <div class="code"><button>Copy</button><pre>select dept, sum(salary) as total
+from emp_normal
+group by dept
+having sum(salary) &gt; 70000
+order by total desc;</pre></div>
+  <div class="tw"><table><tr><th>dept</th><th>total</th></tr><tr><td>HR</td><td>85000</td></tr><tr><td>IT</td><td>80000</td></tr></table></div>
+  <div class="note info"><b>Remember</b><code>where</code> filters rows before grouping. <code>having</code> filters groups after grouping. Row order in group by output can differ.</div>
+  <h3>When you finish</h3>
+  <div class="code"><button>Copy</button><pre>quit;</pre></div>
+  <p>Then run <code>stop-yarn.cmd</code> and <code>stop-dfs.cmd</code>, and close the Derby window.</p>
+</section>
+
+<section id="s8">
+  <h2 class="t"><i class="hex">8</i>Error finder</h2>
+  <p class="lead">Find the message you see, then apply the fix. இந்த error வந்தா இதை செய்.</p>
+  <div class="tw"><table>
+    <tr><th>Message</th><th>Cause</th><th>Fix</th></tr>
+    <tr><td><code>Mkdirs failed to create ...hadoop-unjar...META-INF</code></td><td>Hadoop 3.x with Hive 2.x, or no write access to C:\hadoop\tmp</td><td>Use Hadoop 2.7.x with Hive 2.1.0. Run cmd as Administrator.</td></tr>
+    <tr><td><code>Missing hadoop installation: C:\hadoop\bin must be set</code></td><td>HADOOP_HOME ends with \bin, or the window still has the old value</td><td>Run <code>set HADOOP_HOME=C:\hadoop</code> in cmd (in PowerShell use <code>$env:HADOOP_HOME="C:\hadoop"</code>). For a permanent fix, see step 1a and open a new window.</td></tr>
+    <tr><td><code>Error applying authorization policy ... Access is denied</code></td><td>Not running as Administrator</td><td>Open cmd as Administrator.</td></tr>
+    <tr><td><code>Error connecting to server localhost on port 1527 ... Connection refused</code></td><td>Derby server is not running</td><td>Start Derby (step 2, window 1) and keep it open.</td></tr>
+    <tr><td><code>Table/View 'NEXT_LOCK_ID' does not exist</code></td><td>Metastore has no ACID transaction tables</td><td>Do step 1f once.</td></tr>
+    <tr><td><code>Error 10265 ... ACID table ... non-ACID transaction manager</code></td><td>ACID settings not set in this session</td><td>Run the five set commands in step 5a, then repeat the statement.</td></tr>
+    <tr><td><code>hive configuration hive.enforce.bucketing does not exists</code></td><td>The setting was removed in Hive 2.x</td><td>Skip that line. It is not needed.</td></tr>
+    <tr><td><code>Error 10294 ... transaction manager that does not support these operations</code></td><td>Update or delete on a normal table (or ACID settings missing)</td><td>Expected in step 4. For ACID, use step 5.</td></tr>
+    <tr><td><code>AlreadyExistsException ... Table already exists</code></td><td>The table was created earlier</td><td>Use it as it is, or run <code>drop table name;</code> and create it again.</td></tr>
+    <tr><td><code>ParseException ... cannot recognize input near ...</code></td><td>Typing mistake, for example <code>nsert</code> instead of <code>insert</code></td><td>Correct the spelling. Copy and paste commands from this page.</td></tr>
+    <tr><td><code>'hive' is not recognized</code></td><td>%HIVE_HOME%\bin missing from Path</td><td>Add %HIVE_HOME%\bin, %HADOOP_HOME%\bin and %HADOOP_HOME%\sbin to Path, then open a new window.</td></tr>
+    <tr><td>jps does not list all four Hadoop daemons</td><td>HDFS or YARN did not start</td><td>Run <code>start-dfs.cmd</code> and <code>start-yarn.cmd</code> again and check jps.</td></tr>
+    <tr><td><code>SLF4J: multiple bindings</code>, <code>No log4j2 configuration</code>, <code>Hive-on-MR is deprecated</code></td><td>Warnings only</td><td>Ignore them.</td></tr>
+  </table></div>
+</section>
+</main>
+</div>
+<script>
+document.querySelectorAll('.code button').forEach(function(b){
+  b.addEventListener('click',function(){
+    var t=b.parentNode.querySelector('pre').innerText;
+    function done(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy'},1500)}
+    function fallback(){var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy')}catch(e){}document.body.removeChild(a);done()}
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,fallback)}else{fallback()}
+  });
+});
+</script>
+</body>
+</html>
